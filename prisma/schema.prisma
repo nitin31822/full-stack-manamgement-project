@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// enum userRole {
+//   ChiefExecutiveOfficer
+//   ChiefFinancialOfficer
+//   ChiefInformationOfficer
+//   ChiefMarketingOfficer
+//   ChiefOperationsOfficer
+//   HumanResourcesManager
+//   InformationTechnologyManager
+//   MarketingManager
+//   ProductManager
+//   SalesManager
+//   Founder
+//   Owner
+//   Member
+//   Manager
+// }
+
+model User {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                String    @unique
+  email               String    @unique
+  password            String
+  isVerified          Boolean   @default(false)
+  headline            String?
+  avatar              String?
+  verifyCode          String
+  verifyCodeExpiry    DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  createdCompanyUsers Company[] @relation("companyCreater") // relation of user who cretaes company
+
+  companyMembersId String[]  @db.ObjectId
+  comapnyMembers   Company[] @relation(fields: [companyMembersId], references: [id])
+
+  TaskSender                Task[]                 @relation("TaskSender")
+  TaskReciver               Task[]                 @relation("TaskReciver")
+  friendId                  String[]               @db.ObjectId
+  friends                   FriendsList[]          @relation("friends", fields: [friendId], references: [id])
+  FriendsListUser           FriendsList?
+  sendMessages              Message[]
+  RequestSendersID          String[]               @db.ObjectId
+  RequestSenders            FriendRequests[]       @relation("RequestSender", fields: [RequestSendersID], references: [id])
+  FriendRequestUser         FriendRequests?
+  CompanyMembersRequestUser CompanyMembersRequest?
+
+  @@map("users")
+}
+
+model Company {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  email            String?
+  isEmailVerified  Boolean   @default(false)
+  createdsUserId   String    @db.ObjectId // who creates company
+  createdUser      User      @relation("companyCreater", fields: [createdsUserId], references: [id])
+  sokcetRoomName   String
+  verifyCode       String?
+  headline         String?
+  avatar           String?
+  verifyCodeExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  MembersID        String[]  @db.ObjectId
+  Members          User[]    @relation(fields: [MembersID], references: [id])
+  Tasks            Task[]
+
+  CompanyRequestsID String[]                @db.ObjectId
+  CompanyRequests   CompanyMembersRequest[] @relation("CompanyRequest", fields: [CompanyRequestsID], references: [id])
+
+  @@map("companies")
+}
+
+model Task {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String
+  isCompleted Boolean  @default(false)
+  CompanyId   String   @db.ObjectId
+  Company     Company  @relation(fields: [CompanyId], references: [id])
+  senderId    String   @db.ObjectId
+  sender      User     @relation("TaskSender", fields: [senderId], references: [id])
+  reciverId   String   @db.ObjectId
+  reciver     User     @relation("TaskReciver", fields: [reciverId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tasks")
+}
+
+model Message {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  content             String
+  senderId            String   @db.ObjectId
+  sender              User     @relation(fields: [senderId], references: [id])
+  GroupSocketRoomName String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("messages")
+}
+
+model FriendsList {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  friendsID String[] @db.ObjectId
+  friends   User[]   @relation("friends", fields: [friendsID], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("friends")
+}
+
+model FriendRequests {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  RequestSendersID String[] @db.ObjectId
+  RequestSenders   User[]   @relation("RequestSender", fields: [RequestSendersID], references: [id])
+  userId           String   @unique @db.ObjectId
+  user             User     @relation(fields: [userId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("friendRequests")
+}
+
+model CompanyMembersRequest {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  CompanyRequestsID String[]  @db.ObjectId
+  CompanyRequests   Company[] @relation("CompanyRequest", fields: [CompanyRequestsID], references: [id]) // company who sends request to add in our company
+  userId            String    @unique @db.ObjectId
+  user              User      @relation(fields: [userId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("companyRequests")
+}
